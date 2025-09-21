@@ -1,31 +1,63 @@
-local Players = game:GetService("Players")
-local RS = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local Players = game:GetService("Players")
-local plr = Players.LocalPlayer
-local playerGui = plr:WaitForChild("PlayerGui")
-
--- Pastikan ScreenGui ada
-local screenGui = playerGui:FindFirstChild("ScreenGui")
-if not screenGui then
-    screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ScreenGui"
-    screenGui.Parent = playerGui
+-- Destroy Rayfield lama
+if getgenv().RayfieldWindow then
+    pcall(function()
+        getgenv().RayfieldWindow:Destroy()
+    end)
+    getgenv().RayfieldWindow = nil
 end
 
--- LocationCFrames
+-- Hapus ScreenGui lama kalau ada
+if plr:FindFirstChild("PlayerGui") and plr.PlayerGui:FindFirstChild("TeleportGUI") then
+    plr.PlayerGui.TeleportGUI:Destroy()
+end
+
+-- Load Rayfield
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Buat Window
+local Window = Rayfield:CreateWindow({
+    Name = "PERMANA - GAG",
+    LoadingTitle = "PERMANA SCRIPT",
+    LoadingSubtitle = "| GROW A GARDEN",
+    ConfigurationSaving = {
+       Enabled = true,
+       FolderName = "XenoRayfield",
+       FileName = "DefaultConfig"
+    },
+    KeySystem = false
+})
+getgenv().RayfieldWindow = Window
+
+-- Services
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+
+-- Remotes
+local BuySeedRemote = RS.GameEvents.BuySeedStock
+local BuyGearRemote = RS.GameEvents.BuyGearStock
+local BuyPetRemote = RS.GameEvents.BuyPetEgg
+local BuyEventRemote = RS.GameEvents.BuyEventShopStock
+local FeedRemote = RS.GameEvents.FallMarketEvent.SubmitAllPlants
+local HarvestRemote = RS:WaitForChild("GameEvents"):WaitForChild("Crops")
+
+-- ======= TELEPORT GUI =======
+local playerGui = plr:WaitForChild("PlayerGui")
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TeleportGUI"
+screenGui.Parent = playerGui
+
 local LocationCFrames = {
-    EventCFrame = CFrame.new(-100.685043, 0.90001297, -11.6456203),  -- samping Seed
-    GearShopCFrame = CFrame.new(-284.89959716796875, 2.9828338623046875, -13.92815589904785) -- samping Sell
+    EventCFrame = CFrame.new(-100.685043, 0.90001297, -11.6456203),
+    GearShopCFrame = CFrame.new(-284.89959716796875, 2.9828338623046875, -13.92815589904785)
 }
 
 local function createOverlayButton(name, cframe, positionOffset)
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 70, 0, 30)
-    button.AnchorPoint = Vector2.new(0.5, 0)  -- tengah horizontal
+    button.Size = UDim2.new(0,70,0,30)
+    button.AnchorPoint = Vector2.new(0.5,0)
     button.Position = positionOffset
-    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    button.BackgroundColor3 = Color3.fromRGB(0,170,255)
     button.TextColor3 = Color3.fromRGB(255,255,255)
     button.Text = name
     button.Font = Enum.Font.SourceSansBold
@@ -40,441 +72,283 @@ local function createOverlayButton(name, cframe, positionOffset)
     end)
 end
 
--- Tombol di tengah layar horizontal
-local screenCenterX = 0.5  -- tengah layar
-local startY = 50           -- jarak dari atas
-createOverlayButton("EVENT", LocationCFrames.EventCFrame, UDim2.new(screenCenterX - 0.24, 0, 0, startY))
-createOverlayButton("GEAR", LocationCFrames.GearShopCFrame, UDim2.new(screenCenterX + 0.24, 0, 0, startY))
+local screenCenterX = 0.5
+local startY = 50
+createOverlayButton("MID", LocationCFrames.EventCFrame, UDim2.new(screenCenterX-0.24,0,0,startY))
+createOverlayButton("GEAR", LocationCFrames.GearShopCFrame, UDim2.new(screenCenterX+0.24,0,0,startY))
 
--- Remotes
-local BuySeedRemote = RS.GameEvents.BuySeedStock
-local BuyGearRemote = RS.GameEvents.BuyGearStock
-local BuyPetRemote = RS.GameEvents.BuyPetEgg
+-- ======= AUTO BUY TAB =======
+local AutoTab = Window:CreateTab("AUTO BUY")
+AutoTab:CreateSection("Seed Shop")
 
--- GUI utama
-local ScreenGui = Instance.new("ScreenGui", playerGui)
-ScreenGui.ResetOnSpawn = false
+local AllSeeds = {"Apple","Bamboo","Beanstalk","Blueberry","Burning Bud","Cacao","Cactus","Carrot","Coconut","Corn","Daffodil","Dragon Fruit",
+                   "Elder Strawberry","Ember Lily","Giant Pinecone","Grape","Mango","Mushroom","Orange Tulip","Pepper","Pumpkin","Romanesco","Strawberry","Sugar Apple","Tomato","Watermelon"}
 
-local mainFrame = Instance.new("Frame", ScreenGui)
-mainFrame.Size = UDim2.new(0,300,0,400)
-mainFrame.Position = UDim2.new(0.1,0,0.2,0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
-
--- Header
-local header = Instance.new("Frame", mainFrame)
-header.Size = UDim2.new(1,0,0,30)
-header.BackgroundColor3 = Color3.fromRGB(50,50,50)
-header.BorderSizePixel = 0
-
-local title = Instance.new("TextLabel", header)
-title.Size = UDim2.new(1,-60,1,0)
-title.Position = UDim2.new(0,5,0,0)
-title.BackgroundTransparency = 1
-title.Text = "🌱 Main Menu"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 14
-title.TextXAlignment = Enum.TextXAlignment.Left
-
-local closeBtn = Instance.new("TextButton", header)
-closeBtn.Size = UDim2.new(0,30,1,0)
-closeBtn.Position = UDim2.new(1,-30,0,0)
-closeBtn.BackgroundColor3 = Color3.fromRGB(170,50,50)
-closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.new(1,1,1)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 14
-closeBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-
--- Tombol minimize di header
-local minimizeBtn = Instance.new("TextButton", header)
-minimizeBtn.Size = UDim2.new(0,30,1,0)
-minimizeBtn.Position = UDim2.new(1,-60,0,0) -- kiri tombol close
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(80,80,150)
-minimizeBtn.Text = "-"
-minimizeBtn.TextColor3 = Color3.new(1,1,1)
-minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.TextSize = 18
-
--- Tab Buttons
-local tabFrame = Instance.new("Frame", mainFrame)
-tabFrame.Size = UDim2.new(1,0,0,30)
-tabFrame.Position = UDim2.new(0,0,0,30)
-tabFrame.BackgroundTransparency = 1
-
-local function createTabButton(text,pos)
-    local btn = Instance.new("TextButton", tabFrame)
-    btn.Size = UDim2.new(0,90,1,0)
-    btn.Position = UDim2.new(0,pos,0,0)
-    btn.BackgroundColor3 = Color3.fromRGB(70,70,70)
-    btn.Text = text
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    return btn
-end
-
-local seedTabBtn = createTabButton("Seed",0)
-local gearTabBtn = createTabButton("Gear",100)
-local petTabBtn = createTabButton("Pet",200)
-
--- Content Frame
-local contentFrame = Instance.new("Frame", mainFrame)
-contentFrame.Size = UDim2.new(1,0,1,-60)
-contentFrame.Position = UDim2.new(0,0,0,60)
-contentFrame.BackgroundTransparency = 1
-
--- ===== Seed Frame =====
-local seedShop = playerGui:WaitForChild("Seed_Shop")
-local seedScrolling = seedShop.Frame.ScrollingFrame
-
-local seedFrame = Instance.new("Frame", contentFrame)
-seedFrame.Size = UDim2.new(1,0,1,0)
-seedFrame.BackgroundTransparency = 1
-
-local seedScroll = Instance.new("ScrollingFrame", seedFrame)
-seedScroll.Size = UDim2.new(1,-10,1,0)
-seedScroll.Position = UDim2.new(0,5,0,0)
-seedScroll.BackgroundTransparency = 1
-seedScroll.ScrollBarThickness = 6
-
-local seedLayout = Instance.new("UIListLayout", seedScroll)
-seedLayout.Padding = UDim.new(0,5)
-seedLayout.SortOrder = Enum.SortOrder.LayoutOrder
-seedLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    seedScroll.CanvasSize = UDim2.new(0,0,0,seedLayout.AbsoluteContentSize.Y + 5)
-end)
-
--- Ambil data seed
-local seedNames = {}
-local lookup = {}
-for _, s in pairs(seedScrolling:GetChildren()) do
-    if s:IsA("Frame") then
-        local name = s.Name
-        if not name:lower():find("_padding") and not lookup[name:lower()] then
-            table.insert(seedNames,name)
-            lookup[name:lower()] = true
-        end
-    end
-end
-table.sort(seedNames,function(a,b) return a:lower()<b:lower() end)
-
--- Persistent config
 getgenv().AutoBuyConfig = getgenv().AutoBuyConfig or {}
-getgenv().AutoBuyConfig.Seed = getgenv().AutoBuyConfig.Seed or {}
-local SeedSettings = getgenv().AutoBuyConfig.Seed
+getgenv().AutoBuyConfig.Seed = getgenv().AutoBuyConfig.Seed or {Selected={}, Enabled=false}
+local SeedConfig = getgenv().AutoBuyConfig.Seed
 
--- Fungsi buat tombol seed
-local function createSeedButton(seedName)
-    local frame = Instance.new("Frame", seedScroll)
-    frame.Size = UDim2.new(1,-5,0,35)
-    frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    frame.BorderSizePixel = 0
+local OptionsWithAll = {"All"}
+for _,s in ipairs(AllSeeds) do table.insert(OptionsWithAll,s) end
 
-    local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(0.5,-5,1,0)
-    label.Position = UDim2.new(0,5,0,0)
-    label.BackgroundTransparency = 1
-    label.Text = seedName
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
+AutoTab:CreateDropdown({
+    Name="Pilih Seed",
+    Options=OptionsWithAll,
+    CurrentOption=SeedConfig.Selected,
+    MultipleOptions=true,
+    Flag="SeedDropdown",
+    Callback=function(opts)
+        if table.find(opts,"All") then
+            SeedConfig.Selected = AllSeeds
+        else
+            SeedConfig.Selected = opts
+        end
+    end,
+})
 
-    local buyBtn = Instance.new("TextButton", frame)
-    buyBtn.Size = UDim2.new(0.25,-5,1,-4)
-    buyBtn.Position = UDim2.new(0.5,0,0,2)
-    buyBtn.BackgroundColor3 = Color3.fromRGB(70,120,70)
-    buyBtn.Text = "Buy"
-    buyBtn.TextColor3 = Color3.new(1,1,1)
-    buyBtn.Font = Enum.Font.GothamBold
-    buyBtn.TextSize = 13
-    buyBtn.MouseButton1Click:Connect(function()
-        pcall(function() BuySeedRemote:FireServer("Tier 1",seedName) end)
-    end)
-
-    local toggleBtn = Instance.new("TextButton", frame)
-    toggleBtn.Size = UDim2.new(0.25,-5,1,-4)
-    toggleBtn.Position = UDim2.new(0.75,0,0,2)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-    toggleBtn.TextColor3 = Color3.new(1,1,1)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 13
-
-    SeedSettings[seedName] = SeedSettings[seedName] or false
-    local function updateToggle()
-        if SeedSettings[seedName] then
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
-            toggleBtn.Text = "ON"
+AutoTab:CreateToggle({
+    Name="Auto Buy Seed",
+    CurrentValue=SeedConfig.Enabled,
+    Flag="AutoBuySeeds",
+    Callback=function(state)
+        SeedConfig.Enabled = state
+        if state then
             task.spawn(function()
-                while SeedSettings[seedName] do
-                    pcall(function() BuySeedRemote:FireServer("Tier 1",seedName) end)
-                    task.wait(0.2)
+                while SeedConfig.Enabled do
+                    for _,item in ipairs(SeedConfig.Selected) do
+                        pcall(function()
+                            BuySeedRemote:FireServer("Tier 1", item)
+                        end)
+                        task.wait(0.01)
+                    end
+                    task.wait(0.1)
                 end
             end)
+        end
+    end,
+})
+
+-- Gear Shop
+AutoTab:CreateSection("Gear Shop")
+local AllGears = {"Advanced Sprinkler","Basic Sprinkler","Cleaning Spray","Cleansing Pet Shard","Favorite Tool","Harvest Tool","Levelup Lollipop","Magnifying Glass","Master Sprinkler","Medium Toy","Medium Treat","Recall Wrench","Trading Ticket","Trowel","Watering Can"}
+getgenv().AutoBuyConfig.Gear = getgenv().AutoBuyConfig.Gear or {Selected={}, Enabled=false}
+local GearConfig = getgenv().AutoBuyConfig.Gear
+
+local GearOptions = {"All"}
+for _,g in ipairs(AllGears) do table.insert(GearOptions,g) end
+
+AutoTab:CreateDropdown({
+    Name="Pilih Gear",
+    Options=GearOptions,
+    CurrentOption=GearConfig.Selected,
+    MultipleOptions=true,
+    Flag="GearDropdown",
+    Callback=function(opts)
+        if table.find(opts,"All") then
+            GearConfig.Selected = AllGears
         else
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-            toggleBtn.Text = "OFF"
+            GearConfig.Selected = opts
+        end
+    end,
+})
+
+AutoTab:CreateToggle({
+    Name="Auto Buy Gear",
+    CurrentValue=GearConfig.Enabled,
+    Flag="AutoBuyGear",
+    Callback=function(state)
+        GearConfig.Enabled = state
+        if state then
+            task.spawn(function()
+                while GearConfig.Enabled do
+                    for _,item in ipairs(GearConfig.Selected) do
+                        pcall(function()
+                            BuyGearRemote:FireServer(item)
+                        end)
+                        task.wait(0.01)
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end,
+})
+
+-- Pet Egg Shop
+AutoTab:CreateSection("Pet Egg Shop")
+local AllPets = {"Bug Egg","Common Egg","Legendary Egg","Mythical Egg","Rare Egg","Uncommon Egg"}
+getgenv().AutoBuyConfig.Pet = getgenv().AutoBuyConfig.Pet or {Selected={}, Enabled=false}
+local PetConfig = getgenv().AutoBuyConfig.Pet
+
+local PetOptions = {"All"}
+for _,p in ipairs(AllPets) do table.insert(PetOptions,p) end
+
+AutoTab:CreateDropdown({
+    Name="Pilih Pet Egg",
+    Options=PetOptions,
+    CurrentOption=PetConfig.Selected,
+    MultipleOptions=true,
+    Flag="PetDropdown",
+    Callback=function(opts)
+        if table.find(opts,"All") then
+            PetConfig.Selected = AllPets
+        else
+            PetConfig.Selected = opts
+        end
+    end,
+})
+
+AutoTab:CreateToggle({
+    Name="Auto Buy Pet Egg",
+    CurrentValue=PetConfig.Enabled,
+    Flag="AutoBuyPet",
+    Callback=function(state)
+        PetConfig.Enabled = state
+        if state then
+            task.spawn(function()
+                while PetConfig.Enabled do
+                    for _,item in ipairs(PetConfig.Selected) do
+                        pcall(function()
+                            BuyPetRemote:FireServer(item)
+                        end)
+                        task.wait(0.01)
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end,
+})
+
+-- ======= EVENT TAB =======
+local EventTab = Window:CreateTab("EVENT")
+EventTab:CreateSection("Event Shop")
+local AllEventItems = {"Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon","Space Squirrel","Sugar Glider","Woodpecker",
+"Acorn Bell","Acorn Lollipop","Bonfire","Firefly Jar","Golden Acorn","Harvest Basket","Leaf Blower","Maple Leaf Charm","Maple Leaf Kite","Maple Sprinkler",
+"Maple Syrup","Rake","Sky Lantern","Super Leaf Blower","Carnival Pumpkin","Fall Seed Pack","Golden Peach","Kniphofia","Maple Resin","Meyer Lemon",
+"Parsley","Turnip","Fall Crate","Fall Fountain","Fall Hay Bale","Fall Leaf Chair","Fall Wreath","Flying Kite","Maple Crate","Maple Flag","Pile Of Leaves"}
+
+getgenv().AutoBuyConfig.Event = getgenv().AutoBuyConfig.Event or {Selected={}, Enabled=false}
+local EventConfig = getgenv().AutoBuyConfig.Event
+getgenv().AutoBuyConfig.EventFeed = getgenv().AutoBuyConfig.EventFeed or {Enabled=false}
+local EventFeedConfig = getgenv().AutoBuyConfig.EventFeed
+
+local EventOptions = {"All"}
+for _,s in ipairs(AllEventItems) do table.insert(EventOptions,s) end
+
+EventTab:CreateDropdown({
+    Name="Event Shop Items",
+    Options=EventOptions,
+    CurrentOption=EventConfig.Selected,
+    MultipleOptions=true,
+    Flag="EventDropdown",
+    Callback=function(opts)
+        if table.find(opts,"All") then
+            EventConfig.Selected = AllEventItems
+        else
+            EventConfig.Selected = opts
+        end
+    end,
+})
+
+EventTab:CreateToggle({
+    Name="Auto Buy Event Shop",
+    CurrentValue=EventConfig.Enabled,
+    Flag="AutoBuyEvent",
+    Callback=function(state)
+        EventConfig.Enabled = state
+        if state then
+            task.spawn(function()
+                while EventConfig.Enabled do
+                    for _,item in ipairs(EventConfig.Selected) do
+                        pcall(function()
+                            BuyEventRemote:FireServer(item,1)
+                        end)
+                        task.wait(0.05)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+EventTab:CreateSection("Event Feed")
+EventTab:CreateToggle({
+    Name="Auto Feed Event",
+    CurrentValue=EventFeedConfig.Enabled,
+    Flag="AutoFeedEvent",
+    Callback=function(state)
+        EventFeedConfig.Enabled = state
+        if state then
+            task.spawn(function()
+                while EventFeedConfig.Enabled do
+                    pcall(function()
+                        FeedRemote:FireServer()
+                    end)
+                    task.wait(3)
+                end
+            end)
+        end
+    end,
+})
+
+-- ======= AUTO GARDEN TAB =======
+local GardenTab = Window:CreateTab("AUTO GARDEN")
+GardenTab:CreateSection("Harvest")
+
+getgenv().AutoBuyConfig.Garden = getgenv().AutoBuyConfig.Garden or {Enabled=false}
+local GardenConfig = getgenv().AutoBuyConfig.Garden
+
+local function GetPlayerFarm()
+    local farmFolder = workspace:WaitForChild("Farm")
+    for _, farm in ipairs(farmFolder:GetChildren()) do
+        local important = farm:FindFirstChild("Important")
+        if important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner") then
+            if important.Data.Owner.Value == plr.Name then
+                return farm
+            end
         end
     end
-    updateToggle()
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        SeedSettings[seedName] = not SeedSettings[seedName]
-        updateToggle()
-    end)
 end
 
-for _, name in ipairs(seedNames) do
-    createSeedButton(name)
+local function AutoHarvest()
+    local farm = GetPlayerFarm()
+    if not farm then return end
+    local plantsFolder = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Plants_Physical")
+    if not plantsFolder then return end
+
+    for _, plant in ipairs(plantsFolder:GetChildren()) do
+        local fruitsFolder = plant:FindFirstChild("Fruits")
+        if fruitsFolder then
+            for _, fruit in ipairs(fruitsFolder:GetChildren()) do
+                pcall(function()
+                    HarvestRemote.Collect:FireServer({fruit})
+                end)
+                task.wait(0.05)
+            end
+        end
+    end
 end
 
--- ===== Gear Frame =====
-local gearShop = playerGui:WaitForChild("Gear_Shop")
-local gearScrolling = gearShop.Frame.ScrollingFrame
+GardenTab:CreateToggle({
+    Name="Auto Harvest",
+    CurrentValue=GardenConfig.Enabled,
+    Flag="AutoGardenHarvest",
+    Callback=function(state)
+        GardenConfig.Enabled = state
+    end,
+})
 
-local gearFrame = Instance.new("Frame", contentFrame)
-gearFrame.Size = UDim2.new(1,0,1,0)
-gearFrame.BackgroundTransparency = 1
-gearFrame.Visible = false
-
-local gearScroll = Instance.new("ScrollingFrame", gearFrame)
-gearScroll.Size = UDim2.new(1,-10,1,0)
-gearScroll.Position = UDim2.new(0,5,0,0)
-gearScroll.BackgroundTransparency = 1
-gearScroll.ScrollBarThickness = 6
-
-local gearLayout = Instance.new("UIListLayout", gearScroll)
-gearLayout.Padding = UDim.new(0,5)
-gearLayout.SortOrder = Enum.SortOrder.LayoutOrder
-gearLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    gearScroll.CanvasSize = UDim2.new(0,0,0,gearLayout.AbsoluteContentSize.Y + 5)
+-- Loop Auto Harvest Background
+task.spawn(function()
+    while true do
+        if GardenConfig.Enabled then
+            local success, err = pcall(AutoHarvest)
+            if not success then
+                warn("AutoHarvest error: "..tostring(err))
+            end
+        end
+        task.wait(0.5)
+    end
 end)
-
--- Ambil data gear
-local gearNames = {}
-local lookupG = {}
-for _, g in pairs(gearScrolling:GetChildren()) do
-    if g:IsA("Frame") then
-        local name = g.Name
-        if not name:lower():find("_padding") and not lookupG[name:lower()] then
-            table.insert(gearNames,name)
-            lookupG[name:lower()] = true
-        end
-    end
-end
-table.sort(gearNames,function(a,b) return a:lower()<b:lower() end)
-
--- Persistent config
-getgenv().AutoBuyConfig.Gear = getgenv().AutoBuyConfig.Gear or {}
-local GearSettings = getgenv().AutoBuyConfig.Gear
-
-local function createGearButton(gearName)
-    local frame = Instance.new("Frame", gearScroll)
-    frame.Size = UDim2.new(1,-5,0,35)
-    frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    frame.BorderSizePixel = 0
-
-    local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(0.5,-5,1,0)
-    label.Position = UDim2.new(0,5,0,0)
-    label.BackgroundTransparency = 1
-    label.Text = gearName
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-
-    local buyBtn = Instance.new("TextButton", frame)
-    buyBtn.Size = UDim2.new(0.25,-5,1,-4)
-    buyBtn.Position = UDim2.new(0.5,0,0,2)
-    buyBtn.BackgroundColor3 = Color3.fromRGB(70,120,70)
-    buyBtn.Text = "Buy"
-    buyBtn.TextColor3 = Color3.new(1,1,1)
-    buyBtn.Font = Enum.Font.GothamBold
-    buyBtn.TextSize = 13
-    buyBtn.MouseButton1Click:Connect(function()
-        pcall(function() BuyGearRemote:FireServer(gearName) end)
-    end)
-
-    local toggleBtn = Instance.new("TextButton", frame)
-    toggleBtn.Size = UDim2.new(0.25,-5,1,-4)
-    toggleBtn.Position = UDim2.new(0.75,0,0,2)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-    toggleBtn.TextColor3 = Color3.new(1,1,1)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 13
-
-    GearSettings[gearName] = GearSettings[gearName] or false
-    local function updateToggle()
-        if GearSettings[gearName] then
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
-            toggleBtn.Text = "ON"
-            task.spawn(function()
-                while GearSettings[gearName] do
-                    pcall(function() BuyGearRemote:FireServer(gearName) end)
-                    task.wait(0.2)
-                end
-            end)
-        else
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-            toggleBtn.Text = "OFF"
-        end
-    end
-    updateToggle()
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        GearSettings[gearName] = not GearSettings[gearName]
-        updateToggle()
-    end)
-end
-
-for _, name in ipairs(gearNames) do
-    createGearButton(name)
-end
-
--- ===== Pet Frame =====
-local petShop = playerGui:WaitForChild("PetShop_UI")
-local petScrolling = petShop.Frame.ScrollingFrame
-
-local petFrame = Instance.new("Frame", contentFrame)
-petFrame.Size = UDim2.new(1,0,1,0)
-petFrame.BackgroundTransparency = 1
-petFrame.Visible = false
-
-local petScroll = Instance.new("ScrollingFrame", petFrame)
-petScroll.Size = UDim2.new(1,-10,1,0)
-petScroll.Position = UDim2.new(0,5,0,0)
-petScroll.BackgroundTransparency = 1
-petScroll.ScrollBarThickness = 6
-
-local petLayout = Instance.new("UIListLayout", petScroll)
-petLayout.Padding = UDim.new(0,5)
-petLayout.SortOrder = Enum.SortOrder.LayoutOrder
-petLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    petScroll.CanvasSize = UDim2.new(0,0,0,petLayout.AbsoluteContentSize.Y + 5)
-end)
-
--- Ambil data pet
-local petNames = {}
-local lookupP = {}
-for _, p in pairs(petScrolling:GetChildren()) do
-    if p:IsA("Frame") then
-        local name = p.Name
-        if not name:lower():find("_padding") and not lookupP[name:lower()] then
-            table.insert(petNames,name)
-            lookupP[name:lower()] = true
-        end
-    end
-end
-table.sort(petNames,function(a,b) return a:lower()<b:lower() end)
-
--- Persistent config
-getgenv().AutoBuyConfig.Pet = getgenv().AutoBuyConfig.Pet or {}
-local PetSettings = getgenv().AutoBuyConfig.Pet
-
--- Fungsi tombol pet
-local function createPetButton(petName)
-    local frame = Instance.new("Frame", petScroll)
-    frame.Size = UDim2.new(1,-5,0,35)
-    frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    frame.BorderSizePixel = 0
-
-    local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(0.5,-5,1,0)
-    label.Position = UDim2.new(0,5,0,0)
-    label.BackgroundTransparency = 1
-    label.Text = petName
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-
-    local buyBtn = Instance.new("TextButton", frame)
-    buyBtn.Size = UDim2.new(0.25,-5,1,-4)
-    buyBtn.Position = UDim2.new(0.5,0,0,2)
-    buyBtn.BackgroundColor3 = Color3.fromRGB(70,120,70)
-    buyBtn.Text = "Buy"
-    buyBtn.TextColor3 = Color3.new(1,1,1)
-    buyBtn.Font = Enum.Font.GothamBold
-    buyBtn.TextSize = 13
-    buyBtn.MouseButton1Click:Connect(function()
-        pcall(function() BuyPetRemote:FireServer(petName) end)
-    end)
-
-    local toggleBtn = Instance.new("TextButton", frame)
-    toggleBtn.Size = UDim2.new(0.25,-5,1,-4)
-    toggleBtn.Position = UDim2.new(0.75,0,0,2)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-    toggleBtn.TextColor3 = Color3.new(1,1,1)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 13
-
-    PetSettings[petName] = PetSettings[petName] or false
-    local function updateToggle()
-        if PetSettings[petName] then
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
-            toggleBtn.Text = "ON"
-            task.spawn(function()
-                while PetSettings[petName] do
-                    pcall(function() BuyPetRemote:FireServer(petName) end)
-                    task.wait(0.2)
-                end
-            end)
-        else
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-            toggleBtn.Text = "OFF"
-        end
-    end
-    updateToggle()
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        PetSettings[petName] = not PetSettings[petName]
-        updateToggle()
-    end)
-end
-
-for _, name in ipairs(petNames) do
-    createPetButton(name)
-end
-
--- Tab toggle function
-local function showTab(tab)
-    seedFrame.Visible = tab == "Seed"
-    gearFrame.Visible = tab == "Gear"
-    petFrame.Visible = tab == "Pet"
-end
-
-seedTabBtn.MouseButton1Click:Connect(function() showTab("Seed") end)
-gearTabBtn.MouseButton1Click:Connect(function() showTab("Gear") end)
-petTabBtn.MouseButton1Click:Connect(function() showTab("Pet") end)
-
--- ===== Floating Minimize Button =====
-local floatBtn = Instance.new("TextButton", playerGui)
-floatBtn.Size = UDim2.new(0,40,0,40)
-floatBtn.Position = UDim2.new(0, 20, 0.5, -20)
-floatBtn.BackgroundColor3 = Color3.fromRGB(50,50,150)
-floatBtn.Text = "-"
-floatBtn.TextColor3 = Color3.new(1,1,1)
-floatBtn.Font = Enum.Font.GothamBold
-floatBtn.TextSize = 24
-floatBtn.ZIndex = 10
-floatBtn.AutoButtonColor = true
-
-local minimized = false
-local normalSize = mainFrame.Size
-local normalPos = mainFrame.Position
-
-local function toggleMinimize()
-    minimized = not minimized
-    mainFrame.Visible = not minimized
-    minimizeBtn.Text = minimized and "+" or "-"
-end
-
-floatBtn.MouseButton1Click:Connect(toggleMinimize)
-minimizeBtn.MouseButton1Click:Connect(toggleMinimize)
-
-print("✅ Main Menu + Seed/Gear/Pet Auto-Buy + Minimize ✅")
