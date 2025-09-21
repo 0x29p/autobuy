@@ -17,7 +17,7 @@ end
 -- LocationCFrames
 local LocationCFrames = {
     EventCFrame = CFrame.new(-100.685043, 0.90001297, -11.6456203),  -- samping Seed
-    GearShopCFrame = CFrame.new(-281.89959716796875, 2.9828338623046875, -21.92815589904785) -- samping Sell
+    GearShopCFrame = CFrame.new(-284.89959716796875, 2.9828338623046875, -21.92815589904785) -- samping Sell
 }
 
 local function createOverlayButton(name, cframe, positionOffset)
