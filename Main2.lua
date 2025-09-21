@@ -247,6 +247,61 @@ AutoTab:CreateToggle({
     end,
 })
 
+-- Traveling Merchant Shop
+AutoTab:CreateSection("Traveling Merchant Shop")
+
+local AllMerchantItems = {
+    "Berry Blusher Sprinkler",
+    "Flower Froster Sprinkler",
+    "Spice Spritzer Sprinkler",
+    "Stalk Sprout Sprinkler",
+    "Sweet Soaker Sprinkler",
+    "Tropical Mist Sprinkler"
+}
+
+getgenv().AutoBuyConfig.Merchant = getgenv().AutoBuyConfig.Merchant or {Selected={}, Enabled=false}
+local MerchantConfig = getgenv().AutoBuyConfig.Merchant
+
+local MerchantOptions = {"All"}
+for _,m in ipairs(AllMerchantItems) do table.insert(MerchantOptions,m) end
+
+AutoTab:CreateDropdown({
+    Name="Pilih Merchant Item",
+    Options=MerchantOptions,
+    CurrentOption=MerchantConfig.Selected,
+    MultipleOptions=true,
+    Flag="MerchantDropdown",
+    Callback=function(opts)
+        if table.find(opts,"All") then
+            MerchantConfig.Selected = AllMerchantItems
+        else
+            MerchantConfig.Selected = opts
+        end
+    end,
+})
+
+AutoTab:CreateToggle({
+    Name="Auto Buy Merchant",
+    CurrentValue=MerchantConfig.Enabled,
+    Flag="AutoBuyMerchant",
+    Callback=function(state)
+        MerchantConfig.Enabled = state
+        if state then
+            task.spawn(function()
+                while MerchantConfig.Enabled and not getgenv().AutoBuyKillSwitch.Value do
+                    for _,item in ipairs(MerchantConfig.Selected) do
+                        pcall(function()
+                            RS.GameEvents.BuyTravelingMerchantShopStock:FireServer(item)
+                        end)
+                        task.wait(0.05)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
 -- ========== EVENT TAB ==========
 local EventTab = Window:CreateTab("EVENT")
 EventTab:CreateSection("Event Shop")
