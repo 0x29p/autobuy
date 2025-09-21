@@ -431,3 +431,49 @@ task.spawn(function()
         end
     end
 end)
+
+
+
+local EggTab = Window:CreateTab("ESP")
+EggTab:CreateSection("Esp Egg")
+
+local EggsFolder = RS:WaitForChild("Pets"):WaitForChild(plr.Name):WaitForChild("Eggs")
+
+-- Table buat simpan label UI
+local EggLabels = {}
+
+-- Function update data
+local function UpdateEggs()
+    for _,egg in ipairs(EggsFolder:GetChildren()) do
+        if egg:IsA("Folder") then
+            local eggName = egg.Name
+            local hatchTime = egg:FindFirstChild("HatchTime")
+            local ready = egg:FindFirstChild("Ready")
+            local petName = egg:FindFirstChild("PetName")
+            local weight = egg:FindFirstChild("Weight")
+
+            -- bikin teks status
+            local statusText = ""
+            if ready and ready.Value == true then
+                statusText = string.format("✅ Ready | %s | %.2f KG", petName.Value, weight.Value)
+            else
+                local timeLeft = hatchTime and (hatchTime.Value - os.time()) or 0
+                statusText = string.format("⏳ Hatch in: %s", tostring(timeLeft).."s")
+            end
+
+            -- bikin / update label UI
+            if not EggLabels[eggName] then
+                EggLabels[eggName] = EggTab:CreateSection(eggName .. " - " .. statusText)
+            else
+                EggLabels[eggName].Title = eggName .. " - " .. statusText
+            end
+        end
+    end
+end
+
+-- loop update tiap detik
+task.spawn(function()
+    while task.wait(1) do
+        pcall(UpdateEggs)
+    end
+end)
