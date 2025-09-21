@@ -2,6 +2,49 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+local playerGui = plr:WaitForChild("PlayerGui")
+
+-- Pastikan ScreenGui ada
+local screenGui = playerGui:FindFirstChild("ScreenGui")
+if not screenGui then
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ScreenGui"
+    screenGui.Parent = playerGui
+end
+
+-- LocationCFrames
+local LocationCFrames = {
+    EventCFrame = CFrame.new(-100.685043, 0.90001297, -11.6456203),  -- samping Seed
+    GearShopCFrame = CFrame.new(-281.89959716796875, 2.9828338623046875, -21.92815589904785) -- samping Sell
+}
+
+local function createOverlayButton(name, cframe, positionOffset)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 70, 0, 30)
+    button.AnchorPoint = Vector2.new(0.5, 0)  -- tengah horizontal
+    button.Position = positionOffset
+    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    button.TextColor3 = Color3.fromRGB(255,255,255)
+    button.Text = name
+    button.Font = Enum.Font.SourceSansBold
+    button.TextSize = 14
+    button.ZIndex = 10
+    button.Parent = screenGui
+
+    button.MouseButton1Click:Connect(function()
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            plr.Character.HumanoidRootPart.CFrame = cframe
+        end
+    end)
+end
+
+-- Tombol di tengah layar horizontal
+local screenCenterX = 0.5  -- tengah layar
+local startY = 50           -- jarak dari atas
+createOverlayButton("EVENT", LocationCFrames.EventCFrame, UDim2.new(screenCenterX - 0.24, 0, 0, startY))
+createOverlayButton("GEAR", LocationCFrames.GearShopCFrame, UDim2.new(screenCenterX + 0.24, 0, 0, startY))
 
 -- Remotes
 local BuySeedRemote = RS.GameEvents.BuySeedStock
@@ -45,6 +88,16 @@ closeBtn.TextColor3 = Color3.new(1,1,1)
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 14
 closeBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- Tombol minimize di header
+local minimizeBtn = Instance.new("TextButton", header)
+minimizeBtn.Size = UDim2.new(0,30,1,0)
+minimizeBtn.Position = UDim2.new(1,-60,0,0) -- kiri tombol close
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(80,80,150)
+minimizeBtn.Text = "-"
+minimizeBtn.TextColor3 = Color3.new(1,1,1)
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 18
 
 -- Tab Buttons
 local tabFrame = Instance.new("Frame", mainFrame)
@@ -152,22 +205,7 @@ local function createSeedButton(seedName)
     toggleBtn.TextSize = 13
 
     SeedSettings[seedName] = SeedSettings[seedName] or false
-    if SeedSettings[seedName] then
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
-        toggleBtn.Text = "ON"
-        task.spawn(function()
-            while SeedSettings[seedName] do
-                pcall(function() BuySeedRemote:FireServer("Tier 1",seedName) end)
-                task.wait(0.2)
-            end
-        end)
-    else
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-        toggleBtn.Text = "OFF"
-    end
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        SeedSettings[seedName] = not SeedSettings[seedName]
+    local function updateToggle()
         if SeedSettings[seedName] then
             toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
             toggleBtn.Text = "ON"
@@ -181,6 +219,12 @@ local function createSeedButton(seedName)
             toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
             toggleBtn.Text = "OFF"
         end
+    end
+    updateToggle()
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        SeedSettings[seedName] = not SeedSettings[seedName]
+        updateToggle()
     end)
 end
 
@@ -265,22 +309,7 @@ local function createGearButton(gearName)
     toggleBtn.TextSize = 13
 
     GearSettings[gearName] = GearSettings[gearName] or false
-    if GearSettings[gearName] then
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
-        toggleBtn.Text = "ON"
-        task.spawn(function()
-            while GearSettings[gearName] do
-                pcall(function() BuyGearRemote:FireServer(gearName) end)
-                task.wait(0.2)
-            end
-        end)
-    else
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-        toggleBtn.Text = "OFF"
-    end
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        GearSettings[gearName] = not GearSettings[gearName]
+    local function updateToggle()
         if GearSettings[gearName] then
             toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
             toggleBtn.Text = "ON"
@@ -294,6 +323,12 @@ local function createGearButton(gearName)
             toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
             toggleBtn.Text = "OFF"
         end
+    end
+    updateToggle()
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        GearSettings[gearName] = not GearSettings[gearName]
+        updateToggle()
     end)
 end
 
@@ -379,22 +414,7 @@ local function createPetButton(petName)
     toggleBtn.TextSize = 13
 
     PetSettings[petName] = PetSettings[petName] or false
-    if PetSettings[petName] then
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
-        toggleBtn.Text = "ON"
-        task.spawn(function()
-            while PetSettings[petName] do
-                pcall(function() BuyPetRemote:FireServer(petName) end)
-                task.wait(0.2)
-            end
-        end)
-    else
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-        toggleBtn.Text = "OFF"
-    end
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        PetSettings[petName] = not PetSettings[petName]
+    local function updateToggle()
         if PetSettings[petName] then
             toggleBtn.BackgroundColor3 = Color3.fromRGB(70,170,70)
             toggleBtn.Text = "ON"
@@ -408,6 +428,12 @@ local function createPetButton(petName)
             toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
             toggleBtn.Text = "OFF"
         end
+    end
+    updateToggle()
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        PetSettings[petName] = not PetSettings[petName]
+        updateToggle()
     end)
 end
 
@@ -442,16 +468,13 @@ local minimized = false
 local normalSize = mainFrame.Size
 local normalPos = mainFrame.Position
 
-floatBtn.MouseButton1Click:Connect(function()
-    if minimized then
-        mainFrame.Visible = true
-        mainFrame.Size = normalSize
-        mainFrame.Position = normalPos
-        minimized = false
-    else
-        mainFrame.Visible = false
-        minimized = true
-    end
-end)
+local function toggleMinimize()
+    minimized = not minimized
+    mainFrame.Visible = not minimized
+    minimizeBtn.Text = minimized and "+" or "-"
+end
 
-print("✅ Main Menu + Seed/Gear/Pet Auto-Buy")
+floatBtn.MouseButton1Click:Connect(toggleMinimize)
+minimizeBtn.MouseButton1Click:Connect(toggleMinimize)
+
+print("✅ Main Menu + Seed/Gear/Pet Auto-Buy + Minimize ✅")
