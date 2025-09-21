@@ -435,7 +435,7 @@ end)
 
 
 --== ESP MENU ==--
-
+--== ESP MENU ==--
 
 local EggTab = Window:CreateTab("ESP")
 EggTab:CreateSection("Egg ESP")
@@ -452,13 +452,10 @@ EggTab:CreateToggle({
     end
 })
 
--- fungsi bikin label baru
+-- fungsi bikin label baru (pakai label, bukan paragraph)
 local function CreateEggLabel(egg)
     if EggLabels[egg] then return end
-    EggLabels[egg] = EggTab:CreateParagraph({
-        Title = egg.Name,
-        Content = "Loading..."
-    })
+    EggLabels[egg] = EggTab:CreateLabel("🐣 " .. egg.Name .. " | Loading...")
 end
 
 -- fungsi update isi label
@@ -478,10 +475,8 @@ local function UpdateEgg(egg)
         statusText = string.format("⏳ Hatch in: %s", tostring(timeLeft).."s")
     end
 
-    EggLabels[egg]:Set({
-        Title = egg.Name,
-        Content = statusText
-    })
+    -- Update text label
+    EggLabels[egg].Set("🐣 " .. egg.Name .. " | " .. statusText)
 end
 
 -- listener egg baru
@@ -506,3 +501,4 @@ task.spawn(function()
         end
     end
 end)
+
