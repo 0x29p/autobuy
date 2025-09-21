@@ -435,30 +435,14 @@ end)
 
 
 --== ESP MENU ==--
---== ESP MENU ==--
-
-local EggTab = Window:CreateTab("ESP")
-EggTab:CreateSection("Egg ESP")
-
-local EggsFolder = RS:WaitForChild("Pets"):WaitForChild(plr.Name):WaitForChild("Eggs")
-local EggLabels = {}
-local EggESPEnabled = false
-
-EggTab:CreateToggle({
-    Name = "Enable Egg ESP",
-    CurrentValue = EggESPEnabled,
-    Callback = function(state)
-        EggESPEnabled = state
-    end
-})
-
--- fungsi bikin label baru (pakai label, bukan paragraph)
 local function CreateEggLabel(egg)
     if EggLabels[egg] then return end
-    EggLabels[egg] = EggTab:CreateLabel("🐣 " .. egg.Name .. " | Loading...")
+    EggLabels[egg] = EggTab:CreateParagraph({
+        Title = "🐣 " .. egg.Name,
+        Content = "Loading..."
+    })
 end
 
--- fungsi update isi label
 local function UpdateEgg(egg)
     if not EggLabels[egg] then return end
 
@@ -472,33 +456,12 @@ local function UpdateEgg(egg)
         statusText = string.format("✅ Ready | %s | %.2f KG", petName.Value, weight.Value)
     else
         local timeLeft = hatchTime and (hatchTime.Value - os.time()) or 0
-        statusText = string.format("⏳ Hatch in: %s", tostring(timeLeft).."s")
+        statusText = string.format("⏳ Hatch in: %ss", tostring(timeLeft))
     end
 
-    -- Update text label
-    EggLabels[egg].Set("🐣 " .. egg.Name .. " | " .. statusText)
+    EggLabels[egg]:Set({
+        Title = "🐣 " .. egg.Name,
+        Content = statusText
+    })
 end
-
--- listener egg baru
-EggsFolder.ChildAdded:Connect(function(egg)
-    if egg:IsA("Folder") then
-        CreateEggLabel(egg)
-    end
-end)
-
--- loop update
-task.spawn(function()
-    while task.wait(1) do
-        if EggESPEnabled then
-            for _,egg in ipairs(EggsFolder:GetChildren()) do
-                if egg:IsA("Folder") then
-                    if not EggLabels[egg] then
-                        CreateEggLabel(egg)
-                    end
-                    UpdateEgg(egg)
-                end
-            end
-        end
-    end
-end)
 
