@@ -434,6 +434,9 @@ end)
 
 
 
+--== ESP MENU ==--
+
+
 local EggTab = Window:CreateTab("ESP")
 EggTab:CreateSection("Egg ESP")
 
@@ -441,7 +444,6 @@ local EggsFolder = RS:WaitForChild("Pets"):WaitForChild(plr.Name):WaitForChild("
 local EggLabels = {}
 local EggESPEnabled = false
 
--- toggle buat nyalain/matiin ESP
 EggTab:CreateToggle({
     Name = "Enable Egg ESP",
     CurrentValue = EggESPEnabled,
@@ -450,65 +452,57 @@ EggTab:CreateToggle({
     end
 })
 
--- fungsi styling biar ada warna + border
-local function StyleParagraph(paragraph)
-    local frame = paragraph.Instance
-    if frame and frame:FindFirstChildOfClass("TextLabel") then
-        local label = frame:FindFirstChildOfClass("TextLabel")
-
-        -- style teks
-        label.Font = Enum.Font.GothamBold
-        label.TextColor3 = Color3.fromRGB(255, 255, 200) -- kuning pucat
-        label.TextStrokeTransparency = 0.2 -- pinggiran hitam tipis
-
-        -- style background
-        frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        frame.BackgroundTransparency = 0.1
-        frame.BorderSizePixel = 1
-        frame.BorderColor3 = Color3.fromRGB(255, 255, 100)
-    end
+-- fungsi bikin label baru
+local function CreateEggLabel(egg)
+    if EggLabels[egg] then return end
+    EggLabels[egg] = EggTab:CreateParagraph({
+        Title = egg.Name,
+        Content = "Loading..."
+    })
 end
 
--- function update eggs
-local function UpdateEggs()
-    for _,egg in ipairs(EggsFolder:GetChildren()) do
-        if egg:IsA("Folder") then
-            local eggName = egg.Name
-            local hatchTime = egg:FindFirstChild("HatchTime")
-            local ready = egg:FindFirstChild("Ready")
-            local petName = egg:FindFirstChild("PetName")
-            local weight = egg:FindFirstChild("Weight")
+-- fungsi update isi label
+local function UpdateEgg(egg)
+    if not EggLabels[egg] then return end
 
-            local statusText = ""
-            if ready and ready.Value == true then
-                statusText = string.format("✅ Ready | %s | %.2f KG", petName.Value, weight.Value)
-            else
-                local timeLeft = hatchTime and (hatchTime.Value - os.time()) or 0
-                statusText = string.format("⏳ Hatch in: %s", tostring(timeLeft).."s")
-            end
+    local hatchTime = egg:FindFirstChild("HatchTime")
+    local ready = egg:FindFirstChild("Ready")
+    local petName = egg:FindFirstChild("PetName")
+    local weight = egg:FindFirstChild("Weight")
 
-            -- bikin / update label UI
-            if not EggLabels[eggName] then
-                EggLabels[eggName] = EggTab:CreateParagraph({
-                    Title = eggName,
-                    Content = statusText
-                })
-                StyleParagraph(EggLabels[eggName]) -- kasih style
-            else
-                EggLabels[eggName]:Set({
-                    Title = eggName,
-                    Content = statusText
-                })
-            end
-        end
+    local statusText = ""
+    if ready and ready.Value == true then
+        statusText = string.format("✅ Ready | %s | %.2f KG", petName.Value, weight.Value)
+    else
+        local timeLeft = hatchTime and (hatchTime.Value - os.time()) or 0
+        statusText = string.format("⏳ Hatch in: %s", tostring(timeLeft).."s")
     end
+
+    EggLabels[egg]:Set({
+        Title = egg.Name,
+        Content = statusText
+    })
 end
 
--- loop update realtime
+-- listener egg baru
+EggsFolder.ChildAdded:Connect(function(egg)
+    if egg:IsA("Folder") then
+        CreateEggLabel(egg)
+    end
+end)
+
+-- loop update
 task.spawn(function()
     while task.wait(1) do
         if EggESPEnabled then
-            pcall(UpdateEggs)
+            for _,egg in ipairs(EggsFolder:GetChildren()) do
+                if egg:IsA("Folder") then
+                    if not EggLabels[egg] then
+                        CreateEggLabel(egg)
+                    end
+                    UpdateEgg(egg)
+                end
+            end
         end
     end
 end)
