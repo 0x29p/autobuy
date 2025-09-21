@@ -435,6 +435,23 @@ end)
 
 
 --== ESP MENU ==--
+-- === ESP TAB ===
+local EggTab = Window:CreateTab("ESP")
+EggTab:CreateSection("Egg ESP")
+
+local EggsFolder = RS:WaitForChild("Pets"):WaitForChild(plr.Name):WaitForChild("Eggs")
+local EggLabels = {}
+local EggESPEnabled = false
+
+EggTab:CreateToggle({
+    Name = "Enable Egg ESP",
+    CurrentValue = EggESPEnabled,
+    Callback = function(state)
+        EggESPEnabled = state
+    end
+})
+
+-- bikin label baru (Paragraph bisa diupdate)
 local function CreateEggLabel(egg)
     if EggLabels[egg] then return end
     EggLabels[egg] = EggTab:CreateParagraph({
@@ -443,6 +460,7 @@ local function CreateEggLabel(egg)
     })
 end
 
+-- update data egg
 local function UpdateEgg(egg)
     if not EggLabels[egg] then return end
 
@@ -453,8 +471,10 @@ local function UpdateEgg(egg)
 
     local statusText = ""
     if ready and ready.Value == true then
-        statusText = string.format("✅ Ready | %s | %.2f KG", petName.Value, weight.Value)
+        -- kalau ready: tampil pet name + berat
+        statusText = string.format("✅ Ready | Pet: %s | %.2f KG", petName.Value, weight.Value)
     else
+        -- kalau belum: tampil countdown
         local timeLeft = hatchTime and (hatchTime.Value - os.time()) or 0
         statusText = string.format("⏳ Hatch in: %ss", tostring(timeLeft))
     end
@@ -465,3 +485,25 @@ local function UpdateEgg(egg)
     })
 end
 
+-- listener kalau ada egg baru
+EggsFolder.ChildAdded:Connect(function(egg)
+    if egg:IsA("Folder") then
+        CreateEggLabel(egg)
+    end
+end)
+
+-- loop update tiap 1 detik
+task.spawn(function()
+    while task.wait(1) do
+        if EggESPEnabled then
+            for _,egg in ipairs(EggsFolder:GetChildren()) do
+                if egg:IsA("Folder") then
+                    if not EggLabels[egg] then
+                        CreateEggLabel(egg)
+                    end
+                    UpdateEgg(egg)
+                end
+            end
+        end
+    end
+end)
