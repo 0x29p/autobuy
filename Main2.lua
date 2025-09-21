@@ -435,14 +435,41 @@ end)
 
 
 local EggTab = Window:CreateTab("ESP")
-EggTab:CreateSection("Esp Egg")
+EggTab:CreateSection("Egg ESP")
 
 local EggsFolder = RS:WaitForChild("Pets"):WaitForChild(plr.Name):WaitForChild("Eggs")
-
--- Table buat simpan label UI
 local EggLabels = {}
+local EggESPEnabled = false
 
--- Function update data
+-- toggle buat nyalain/matiin ESP
+EggTab:CreateToggle({
+    Name = "Enable Egg ESP",
+    CurrentValue = EggESPEnabled,
+    Callback = function(state)
+        EggESPEnabled = state
+    end
+})
+
+-- fungsi styling biar ada warna + border
+local function StyleParagraph(paragraph)
+    local frame = paragraph.Instance
+    if frame and frame:FindFirstChildOfClass("TextLabel") then
+        local label = frame:FindFirstChildOfClass("TextLabel")
+
+        -- style teks
+        label.Font = Enum.Font.GothamBold
+        label.TextColor3 = Color3.fromRGB(255, 255, 200) -- kuning pucat
+        label.TextStrokeTransparency = 0.2 -- pinggiran hitam tipis
+
+        -- style background
+        frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        frame.BackgroundTransparency = 0.1
+        frame.BorderSizePixel = 1
+        frame.BorderColor3 = Color3.fromRGB(255, 255, 100)
+    end
+end
+
+-- function update eggs
 local function UpdateEggs()
     for _,egg in ipairs(EggsFolder:GetChildren()) do
         if egg:IsA("Folder") then
@@ -452,7 +479,6 @@ local function UpdateEggs()
             local petName = egg:FindFirstChild("PetName")
             local weight = egg:FindFirstChild("Weight")
 
-            -- bikin teks status
             local statusText = ""
             if ready and ready.Value == true then
                 statusText = string.format("✅ Ready | %s | %.2f KG", petName.Value, weight.Value)
@@ -463,17 +489,26 @@ local function UpdateEggs()
 
             -- bikin / update label UI
             if not EggLabels[eggName] then
-                EggLabels[eggName] = EggTab:CreateSection(eggName .. " - " .. statusText)
+                EggLabels[eggName] = EggTab:CreateParagraph({
+                    Title = eggName,
+                    Content = statusText
+                })
+                StyleParagraph(EggLabels[eggName]) -- kasih style
             else
-                EggLabels[eggName].Title = eggName .. " - " .. statusText
+                EggLabels[eggName]:Set({
+                    Title = eggName,
+                    Content = statusText
+                })
             end
         end
     end
 end
 
--- loop update tiap detik
+-- loop update realtime
 task.spawn(function()
     while task.wait(1) do
-        pcall(UpdateEggs)
+        if EggESPEnabled then
+            pcall(UpdateEggs)
+        end
     end
 end)
