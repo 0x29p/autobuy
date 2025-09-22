@@ -376,6 +376,8 @@ EventTab:CreateToggle({
     end,
 })
 
+
+
 -- ========== AUTO GARDEN TAB ==========
 local GardenTab = Window:CreateTab("AUTO GARDEN")
 GardenTab:CreateSection("Harvest")
