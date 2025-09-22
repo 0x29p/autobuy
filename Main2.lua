@@ -356,25 +356,98 @@ EventTab:CreateToggle({
     end,
 })
 
-EventTab:CreateSection("Event Feed")
+-- 📂 Config
+getgenv().EventFeedConfig = getgenv().EventFeedConfig or {
+    Enabled = false,
+    Crops = { -- ✅ Tambahin crop di sini kalau ada tanaman baru
+        Bamboo = {Type = "Direct"},
+        Peach = {Type = "Fruit"},
+        Coconut = {Type = "Fruit"},
+        Mangosteen = {Type = "Fruit"},
+        Duskpuff = {Type = "Fruit"},
+        ["Giant Pinecone"] = {Type = "Fruit"},
+        -- contoh tambahan:
+        -- ["Berry Plant"] = {Type = "Fruit"},
+        -- ["Pumpkin"] = {Type = "Fruit"},
+    }
+}
+
+-- ⚡ Remote
+local RS = game:GetService("ReplicatedStorage")
+local Crops = RS.GameEvents.Crops
+local Market = RS.GameEvents.FallMarketEvent
+
+-- 🔹 Ambil tanaman sesuai config
+local function GetEventPlants()
+    local args = {
+        [1] = {}
+    }
+
+    for cropName, cropInfo in pairs(EventFeedConfig.Crops) do
+        local categoryModel = workspace.Farm.Farm.Important.Plants_Physical:FindFirstChild(cropName)
+        if categoryModel then
+            if cropInfo.Type == "Direct" then
+                -- Ambil langsung (contoh: Bamboo)
+                for _, v in pairs(workspace.Farm.Farm.Important.Plants_Physical:GetChildren()) do
+                    if v.Name:match(cropName) then
+                        table.insert(args[1], v)
+                    end
+                end
+            elseif cropInfo.Type == "Fruit" then
+                -- Ambil dari Fruits folder
+                if categoryModel:FindFirstChild("Fruits") then
+                    for _, fruit in pairs(categoryModel.Fruits:GetChildren()) do
+                        table.insert(args[1], fruit)
+                    end
+                end
+            end
+        end
+    end
+
+    return args
+end
+
+-- 🔹 Auto Harvest Feed (Collect + SubmitAll)
+local function AutoHarvestFeed()
+    local args = GetEventPlants()
+    if #args[1] > 0 then
+        Crops.Collect:FireServer(unpack(args))
+        Market.SubmitAllPlants:FireServer()
+    end
+end
+
+-- 🔹 Toggle UI
+EventTab:CreateSection("Event Harvest Feed")
 EventTab:CreateToggle({
-    Name="Auto Feed Event",
-    CurrentValue=EventFeedConfig.Enabled,
-    Flag="AutoFeedEvent",
-    Callback=function(state)
+    Name = "Auto Harvest Feed Event",
+    CurrentValue = EventFeedConfig.Enabled,
+    Flag = "AutoFeedEvent",
+    Callback = function(state)
         EventFeedConfig.Enabled = state
         if state then
             task.spawn(function()
                 while EventFeedConfig.Enabled do
                     pcall(function()
-                        FeedRemote:FireServer()
+                        AutoHarvestFeed()
                     end)
-                    task.wait(3)
+                    task.wait(3) -- delay antar harvest
                 end
             end)
         end
     end,
 })
+
+-- 🔹 Auto resume kalau config.Enabled = true
+if EventFeedConfig.Enabled then
+    task.spawn(function()
+        while EventFeedConfig.Enabled do
+            pcall(function()
+                AutoHarvestFeed()
+            end)
+            task.wait(3)
+        end
+    end)
+end
 
 
 
