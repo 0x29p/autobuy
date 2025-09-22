@@ -356,19 +356,15 @@ EventTab:CreateToggle({
     end,
 })
 
+
 -- 📂 Config
 getgenv().EventFeedConfig = getgenv().EventFeedConfig or {
     Enabled = false,
-    Crops = { -- ✅ Tambahin crop di sini kalau ada tanaman baru
-        Bamboo = {Type = "Direct"},
-        Peach = {Type = "Fruit"},
-        Coconut = {Type = "Fruit"},
-        Mangosteen = {Type = "Fruit"},
-        Duskpuff = {Type = "Fruit"},
-        ["Giant Pinecone"] = {Type = "Fruit"},
-        -- contoh tambahan:
-        -- ["Berry Plant"] = {Type = "Fruit"},
-        -- ["Pumpkin"] = {Type = "Fruit"},
+    -- Mapping kategori event ke daftar tanaman (ambil dari wiki/remote)
+    Categories = {
+        ["Woody Plants"] = {"Bamboo", "Giant Pinecone", "Duskpuff"},
+        ["Tropical Plants"] = {"Coconut", "Peach", "Mangosteen"},
+        ["Berry Plants"] = {"Berry Plant", "Strawberry", "Blueberry"},
     }
 }
 
@@ -377,27 +373,40 @@ local RS = game:GetService("ReplicatedStorage")
 local Crops = RS.GameEvents.Crops
 local Market = RS.GameEvents.FallMarketEvent
 
--- 🔹 Ambil tanaman sesuai config
-local function GetEventPlants()
-    local args = {
-        [1] = {}
-    }
+-- 🔹 Cari kategori event yang lagi aktif
+local function GetCurrentEventCategory()
+    -- ⚠️ Di sini kamu perlu cek workspace / remote
+    -- biasanya ada ValueObject / StringValue di NPC event
+    -- Contoh placeholder:
+    local eventFolder = workspace:FindFirstChild("FallEvent")
+    if eventFolder and eventFolder:FindFirstChild("CurrentCategory") then
+        return eventFolder.CurrentCategory.Value
+    end
+    -- fallback
+    return "Tropical Plants"
+end
 
-    for cropName, cropInfo in pairs(EventFeedConfig.Crops) do
+-- 🔹 Ambil tanaman sesuai event kategori
+local function GetEventPlants()
+    local args = { [1] = {} }
+
+    local category = GetCurrentEventCategory()
+    local cropsList = EventFeedConfig.Categories[category]
+    if not cropsList then return args end
+
+    for _, cropName in ipairs(cropsList) do
         local categoryModel = workspace.Farm.Farm.Important.Plants_Physical:FindFirstChild(cropName)
         if categoryModel then
-            if cropInfo.Type == "Direct" then
-                -- Ambil langsung (contoh: Bamboo)
+            if categoryModel:FindFirstChild("Fruits") then
+                -- 🍍 ambil semua child dari Fruits
+                for _, fruit in pairs(categoryModel.Fruits:GetChildren()) do
+                    table.insert(args[1], fruit)
+                end
+            else
+                -- 🎋 ambil langsung child tanaman (contoh Bamboo - xx)
                 for _, v in pairs(workspace.Farm.Farm.Important.Plants_Physical:GetChildren()) do
                     if v.Name:match(cropName) then
                         table.insert(args[1], v)
-                    end
-                end
-            elseif cropInfo.Type == "Fruit" then
-                -- Ambil dari Fruits folder
-                if categoryModel:FindFirstChild("Fruits") then
-                    for _, fruit in pairs(categoryModel.Fruits:GetChildren()) do
-                        table.insert(args[1], fruit)
                     end
                 end
             end
@@ -407,11 +416,13 @@ local function GetEventPlants()
     return args
 end
 
--- 🔹 Auto Harvest Feed (Collect + SubmitAll)
+-- 🔹 Harvest + Submit
 local function AutoHarvestFeed()
     local args = GetEventPlants()
     if #args[1] > 0 then
+        -- 🥭 Harvest
         Crops.Collect:FireServer(unpack(args))
+        -- 📦 Submit ke Event NPC
         Market.SubmitAllPlants:FireServer()
     end
 end
@@ -427,28 +438,23 @@ EventTab:CreateToggle({
         if state then
             task.spawn(function()
                 while EventFeedConfig.Enabled do
-                    pcall(function()
-                        AutoHarvestFeed()
-                    end)
-                    task.wait(3) -- delay antar harvest
+                    pcall(AutoHarvestFeed)
+                    task.wait(3)
                 end
             end)
         end
     end,
 })
 
--- 🔹 Auto resume kalau config.Enabled = true
+-- 🔹 Auto resume kalau nyala
 if EventFeedConfig.Enabled then
     task.spawn(function()
         while EventFeedConfig.Enabled do
-            pcall(function()
-                AutoHarvestFeed()
-            end)
+            pcall(AutoHarvestFeed)
             task.wait(3)
         end
     end)
 end
-
 
 
 -- ========== AUTO GARDEN TAB ==========
