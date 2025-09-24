@@ -315,23 +315,36 @@ AutoTab:CreateToggle({
     end,
 })
 
--- ========== EVENT TAB ==========
+
+---- event shop menu
+-- -- // Remote buat beli event shop
+local BuyEventRemote = game:GetService("ReplicatedStorage").GameEvents.BuyEventShopStock
+
+-- // Tab & Section
 local EventTab = Window:CreateTab("EVENT")
 EventTab:CreateSection("Event Shop")
 
-local AllEventItems = {"Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon","Space Squirrel","Sugar Glider","Woodpecker",
-"Acorn Bell","Acorn Lollipop","Bonfire","Firefly Jar","Golden Acorn","Harvest Basket","Leaf Blower","Maple Leaf Charm","Maple Leaf Kite","Maple Sprinkler",
-"Maple Syrup","Rake","Sky Lantern","Super Leaf Blower","Carnival Pumpkin","Fall Seed Pack","Golden Peach","Kniphofia","Maple Resin","Meyer Lemon",
-"Parsley","Turnip","Fall Crate","Fall Fountain","Fall Hay Bale","Fall Leaf Chair","Fall Wreath","Flying Kite","Maple Crate","Maple Flag","Pile Of Leaves"}
+-- // Semua item event
+local AllEventItems = {
+    "Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon","Space Squirrel","Sugar Glider","Woodpecker",
+    "Acorn Bell","Acorn Lollipop","Bonfire","Firefly Jar","Golden Acorn","Harvest Basket","Leaf Blower","Maple Leaf Charm","Maple Leaf Kite","Maple Sprinkler",
+    "Maple Syrup","Rake","Sky Lantern","Super Leaf Blower","Carnival Pumpkin","Fall Seed Pack","Golden Peach","Kniphofia","Maple Resin","Meyer Lemon",
+    "Parsley","Turnip","Fall Crate","Fall Fountain","Fall Hay Bale","Fall Leaf Chair","Fall Wreath","Flying Kite","Maple Crate","Maple Flag","Pile Of Leaves"
+}
 
+-- // Config
 getgenv().AutoBuyConfig.Event = getgenv().AutoBuyConfig.Event or {Selected={}, Enabled=false}
 local EventConfig = getgenv().AutoBuyConfig.Event
 getgenv().AutoBuyConfig.EventFeed = getgenv().AutoBuyConfig.EventFeed or {Enabled=false}
 local EventFeedConfig = getgenv().AutoBuyConfig.EventFeed
 
+-- // Dropdown Options
 local EventOptions = {"All"}
-for _,s in ipairs(AllEventItems) do table.insert(EventOptions,s) end
+for _,s in ipairs(AllEventItems) do
+    table.insert(EventOptions, s)
+end
 
+-- // Dropdown Menu
 EventTab:CreateDropdown({
     Name="Event Shop Items",
     Options=EventOptions,
@@ -347,6 +360,7 @@ EventTab:CreateDropdown({
     end,
 })
 
+-- // Toggle Auto Buy
 EventTab:CreateToggle({
     Name="Auto Buy Event Shop",
     CurrentValue=EventConfig.Enabled,
@@ -358,17 +372,17 @@ EventTab:CreateToggle({
                 while EventConfig.Enabled do
                     for _,item in ipairs(EventConfig.Selected) do
                         pcall(function()
-                            BuyEventRemote:FireServer(item,1)
+                            print("Trying to buy:", item)
+                            BuyEventRemote:FireServer(item, 1) -- item & jumlah
                         end)
-                        task.wait(0.05)
+                        task.wait(0.05) -- delay per item
                     end
-                    task.wait(0.5)
+                    task.wait(0.5) -- delay antar loop
                 end
             end)
         end
     end,
 })
-
 
 
 
