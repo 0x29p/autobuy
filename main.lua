@@ -317,7 +317,7 @@ AutoTab:CreateToggle({
 
 
 ---- event shop menu
--- // Remote buat beli event shop
+-- // Remote
 local BuyEventRemote = game:GetService("ReplicatedStorage").GameEvents.BuyEventShopStock
 local UnlockRemote = game:GetService("ReplicatedStorage").GameEvents.SaveSlotService.RememberUnlockage
 
@@ -361,9 +361,9 @@ EventTab:CreateDropdown({
     end,
 })
 
--- // Toggle Auto Buy (Fast 1 Item)
+-- // Toggle Auto Buy
 EventTab:CreateToggle({
-    Name="Auto Buy Event Shop (Fast 1 Item)",
+    Name="Auto Buy Event Shop",
     CurrentValue=EventConfig.Enabled,
     Flag="AutoBuyEvent",
     Callback=function(state)
@@ -371,25 +371,26 @@ EventTab:CreateToggle({
         if state then
             task.spawn(function()
                 while EventConfig.Enabled do
-                    local item = EventConfig.Selected[1] -- ambil item pertama dari dropdown
-                    if item then
+                    for _,item in ipairs(EventConfig.Selected) do
                         pcall(function()
-                            -- 1. Unlock slot
-                            UnlockRemote:FireServer()
-                            task.wait(0.05)
-
-                            -- 2. Beli item
+                            -- 1. Beli dulu
                             BuyEventRemote:FireServer(item, 1)
-                            print("Bought:", item)
+                            print("Buying:", item)
+
+                            -- 2. Baru unlock
+                            UnlockRemote:FireServer()
+                            print("Unlock called after", item)
                         end)
+                        task.wait(0.15) -- delay antar item
                     end
-                    task.wait(0.1) -- delay kecil biar cepat tapi aman
+                    task.wait(0.3) -- delay antar loop
                 end
             end)
         end
     end,
 })
 
+--------
 
 -- ambil services
 local RS = game:GetService("ReplicatedStorage")
