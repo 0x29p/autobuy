@@ -1,18 +1,48 @@
+-- ========== SAFE INIT ==========
+
 -- Destroy Rayfield lama
-if getgenv().RayfieldWindow then
-    pcall(function()
+pcall(function()
+    if getgenv().RayfieldWindow then
         getgenv().RayfieldWindow:Destroy()
-    end)
-    getgenv().RayfieldWindow = nil
-end
+        getgenv().RayfieldWindow = nil
+    end
+end)
 
--- Hapus ScreenGui lama kalau ada
-if plr:FindFirstChild("PlayerGui") and plr.PlayerGui:FindFirstChild("TeleportGUI") then
-    plr.PlayerGui.TeleportGUI:Destroy()
-end
+-- Detect GUI Parent (support PC & HP)
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+local GuiParent = (gethui and gethui()) or game:GetService("CoreGui") or plr:WaitForChild("PlayerGui")
 
--- Load Rayfield
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Hapus Teleport GUI lama
+pcall(function()
+    if GuiParent:FindFirstChild("TeleportGUI") then
+        GuiParent.TeleportGUI:Destroy()
+    end
+end)
+
+-- ========== LOAD RAYFIELD ==========
+local Rayfield
+pcall(function()
+    Rayfield = loadstring(game:HttpGetAsync("https://sirius.menu/rayfield"))()
+end)
+
+-- Fallback kalau Rayfield gagal load
+if not Rayfield then
+    warn("⚠️ Rayfield gagal dimuat, pakai fallback UI minimal")
+    Rayfield = {
+        CreateWindow = function()
+            return {
+                CreateTab = function()
+                    return {
+                        CreateSection=function()end,
+                        CreateDropdown=function()end,
+                        CreateToggle=function()end
+                    }
+                end
+            }
+        end
+    }
+end
 
 -- Buat Window
 local Window = Rayfield:CreateWindow({
@@ -28,9 +58,7 @@ local Window = Rayfield:CreateWindow({
 })
 getgenv().RayfieldWindow = Window
 
--- Services
-local Players = game:GetService("Players")
-local plr = Players.LocalPlayer
+-- ========== SERVICES ==========
 local RS = game:GetService("ReplicatedStorage")
 
 -- Remotes
@@ -41,11 +69,10 @@ local BuyEventRemote = RS.GameEvents.BuyEventShopStock
 local FeedRemote = RS.GameEvents.FallMarketEvent.SubmitAllPlants
 local HarvestRemote = RS:WaitForChild("GameEvents"):WaitForChild("Crops")
 
--- ======= TELEPORT GUI =======
-local playerGui = plr:WaitForChild("PlayerGui")
+-- ========== TELEPORT GUI ==========
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TeleportGUI"
-screenGui.Parent = playerGui
+screenGui.Parent = GuiParent
 
 local LocationCFrames = {
     EventCFrame = CFrame.new(-100.685043, 0.90001297, -11.6456203),
@@ -77,7 +104,7 @@ local startY = 50
 createOverlayButton("MID", LocationCFrames.EventCFrame, UDim2.new(screenCenterX-0.24,0,0,startY))
 createOverlayButton("GEAR", LocationCFrames.GearShopCFrame, UDim2.new(screenCenterX+0.24,0,0,startY))
 
--- ======= AUTO BUY TAB =======
+-- ========== AUTO BUY TAB ==========
 local AutoTab = Window:CreateTab("AUTO BUY")
 AutoTab:CreateSection("Seed Shop")
 
@@ -119,9 +146,9 @@ AutoTab:CreateToggle({
                         pcall(function()
                             BuySeedRemote:FireServer("Tier 1", item)
                         end)
-                        task.wait(0.01)
+                        task.wait(0.05)
                     end
-                    task.wait(0.1)
+                    task.wait(0.2)
                 end
             end)
         end
@@ -165,9 +192,9 @@ AutoTab:CreateToggle({
                         pcall(function()
                             BuyGearRemote:FireServer(item)
                         end)
-                        task.wait(0.01)
+                        task.wait(0.05)
                     end
-                    task.wait(0.1)
+                    task.wait(0.2)
                 end
             end)
         end
@@ -211,18 +238,87 @@ AutoTab:CreateToggle({
                         pcall(function()
                             BuyPetRemote:FireServer(item)
                         end)
-                        task.wait(0.01)
+                        task.wait(0.05)
                     end
-                    task.wait(0.1)
+                    task.wait(0.2)
                 end
             end)
         end
     end,
 })
 
--- ======= EVENT TAB =======
+-- Traveling Merchant Shop
+AutoTab:CreateSection("Traveling Merchant Shop")
+
+local AllMerchantItems = {
+    "Berry Blusher Sprinkler",
+    "Flower Froster Sprinkler",
+    "Spice Spritzer Sprinkler",
+    "Stalk Sprout Sprinkler",
+    "Sweet Soaker Sprinkler",
+    "Tropical Mist Sprinkler",
+	"Avocado",
+	"Banana",
+	"Bell Pepper",
+	"Cauliflower",
+	"Common Summer Egg",
+	"Feijoa",
+	"Green Apple",
+	"Kiwi",
+	"Loquat",
+	"Paradise Egg",
+	"Pineapple",
+	"Pitcher Plant"
+	
+}
+
+getgenv().AutoBuyConfig.Merchant = getgenv().AutoBuyConfig.Merchant or {Selected={}, Enabled=false}
+local MerchantConfig = getgenv().AutoBuyConfig.Merchant
+
+local MerchantOptions = {"All"}
+for _,m in ipairs(AllMerchantItems) do table.insert(MerchantOptions,m) end
+
+AutoTab:CreateDropdown({
+    Name="Pilih Merchant Item",
+    Options=MerchantOptions,
+    CurrentOption=MerchantConfig.Selected,
+    MultipleOptions=true,
+    Flag="MerchantDropdown",
+    Callback=function(opts)
+        if table.find(opts,"All") then
+            MerchantConfig.Selected = AllMerchantItems
+        else
+            MerchantConfig.Selected = opts
+        end
+    end,
+})
+
+AutoTab:CreateToggle({
+    Name="Auto Buy Merchant",
+    CurrentValue=MerchantConfig.Enabled,
+    Flag="AutoBuyMerchant",
+    Callback=function(state)
+        MerchantConfig.Enabled = state
+        if state then
+            task.spawn(function()
+                while MerchantConfig.Enabled and not getgenv().AutoBuyKillSwitch.Value do
+                    for _,item in ipairs(MerchantConfig.Selected) do
+                        pcall(function()
+                            RS.GameEvents.BuyTravelingMerchantShopStock:FireServer(item)
+                        end)
+                        task.wait(0.05)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+-- ========== EVENT TAB ==========
 local EventTab = Window:CreateTab("EVENT")
 EventTab:CreateSection("Event Shop")
+
 local AllEventItems = {"Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon","Space Squirrel","Sugar Glider","Woodpecker",
 "Acorn Bell","Acorn Lollipop","Bonfire","Firefly Jar","Golden Acorn","Harvest Basket","Leaf Blower","Maple Leaf Charm","Maple Leaf Kite","Maple Sprinkler",
 "Maple Syrup","Rake","Sky Lantern","Super Leaf Blower","Carnival Pumpkin","Fall Seed Pack","Golden Peach","Kniphofia","Maple Resin","Meyer Lemon",
@@ -273,27 +369,102 @@ EventTab:CreateToggle({
     end,
 })
 
-EventTab:CreateSection("Event Feed")
+
+
+
+-- ambil services
+local RS = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+
+-- remotes
+local Crops = RS.GameEvents.Crops
+local Market = RS.GameEvents.FallMarketEvent
+
+-- cari farm player
+local function GetPlayerFarm()
+    for _, farm in ipairs(workspace.Farm:GetChildren()) do
+        local important = farm:FindFirstChild("Important")
+        if important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner") then
+            if important.Data.Owner.Value == plr.Name then
+                return farm
+            end
+        end
+    end
+    return nil
+end
+
+-- ambil semua buah
+local function GetAllFruits()
+    local fruits = {}
+    local farm = GetPlayerFarm()
+    if not farm then return fruits end
+
+    local plantsFolder = farm.Important:FindFirstChild("Plants_Physical")
+    if not plantsFolder then return fruits end
+
+    for _, plant in ipairs(plantsFolder:GetChildren()) do
+        local fruitsFolder = plant:FindFirstChild("Fruits")
+        if fruitsFolder then
+            for _, fruit in ipairs(fruitsFolder:GetChildren()) do
+                table.insert(fruits, fruit)
+            end
+        end
+    end
+    return fruits
+end
+
+-- auto harvest + feed
+local function AutoHarvestAndFeedAll()
+    local fruits = GetAllFruits()
+    if #fruits > 0 then
+        -- harus nested table di index [1]
+        local args = { [1] = {} }
+        for i, fruit in ipairs(fruits) do
+            args[1][i] = fruit
+        end
+
+        -- HARVEST
+        pcall(function()
+            Crops.Collect:FireServer(unpack(args))  -- unpack(args) = args[1]
+        end)
+
+        task.wait(1)
+
+        -- FEED KE EVENT
+        pcall(function()
+            Market.SubmitAllPlants:FireServer()
+        end)
+    end
+end
+
+-- toggle UI
+EventTab:CreateSection("Auto Harvest + Feed Semua Tanaman")
+
 EventTab:CreateToggle({
-    Name="Auto Feed Event",
-    CurrentValue=EventFeedConfig.Enabled,
-    Flag="AutoFeedEvent",
-    Callback=function(state)
-        EventFeedConfig.Enabled = state
+    Name = "Auto Harvest + Feed (Semua)",
+    CurrentValue = false,
+    Flag = "AutoHarvestFeedAll",
+    Callback = function(state)
+        if getgenv().AutoFeedLoop then
+            getgenv().AutoFeedLoop.Running = false
+        end
+
         if state then
+            getgenv().AutoFeedLoop = {Running = true}
+            local ThisLoop = getgenv().AutoFeedLoop
             task.spawn(function()
-                while EventFeedConfig.Enabled do
-                    pcall(function()
-                        FeedRemote:FireServer()
-                    end)
-                    task.wait(3)
+                while ThisLoop.Running do
+                    AutoHarvestAndFeedAll()
+                    task.wait(5)
                 end
             end)
         end
     end,
 })
 
--- ======= AUTO GARDEN TAB =======
+
+-- ========== AUTO GARDEN TAB ==========
 local GardenTab = Window:CreateTab("AUTO GARDEN")
 GardenTab:CreateSection("Harvest")
 
@@ -342,13 +513,14 @@ GardenTab:CreateToggle({
 
 -- Loop Auto Harvest Background
 task.spawn(function()
-    while true do
+    while task.wait(0.7) do -- lebih enteng biar HP gak lag
         if GardenConfig.Enabled then
-            local success, err = pcall(AutoHarvest)
-            if not success then
-                warn("AutoHarvest error: "..tostring(err))
-            end
+            pcall(AutoHarvest)
         end
-        task.wait(0.5)
     end
 end)
+
+
+
+
+--== ESP MENU ==--
