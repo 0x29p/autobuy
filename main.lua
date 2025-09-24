@@ -323,38 +323,43 @@ local Event = ReplicatedStorage.GameEvents
 local UnlockRemote = Event.SaveSlotService.RememberUnlockage
 local BuyRemote = Event.BuyEventShopStock
 
--- // UI Shop (ambil semua nama item otomatis dari shop UI)
-local ShopUI = game:GetService("Players").LocalPlayer.PlayerGui:WaitForChild("EventShop_UI")
-local Items = {}
-for _,v in pairs(ShopUI.Frame.ScrollingFrame:GetChildren()) do
-    if v:IsA("Frame") then
-        table.insert(Items, v.Name)
-    end
-end
+-- // Daftar Item Event Shop (static list lu kemarin)
+local AllEventItems = {
+    "Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon",
+    "Space Squirrel","Sugar Glider","Woodpecker","Acorn Bell","Acorn Lollipop",
+    "Bonfire","Firefly Jar","Golden Acorn","Harvest Basket","Leaf Blower",
+    "Maple Leaf Charm","Maple Leaf Kite","Maple Sprinkler","Maple Syrup","Rake",
+    "Sky Lantern","Super Leaf Blower","Carnival Pumpkin","Fall Seed Pack",
+    "Golden Peach","Kniphofia","Maple Resin","Meyer Lemon","Parsley","Turnip",
+    "Fall Crate","Fall Fountain","Fall Hay Bale","Fall Leaf Chair","Fall Wreath",
+    "Flying Kite","Maple Crate","Maple Flag","Pile Of Leaves"
+}
 
 -- Tambahin opsi "All"
-table.insert(Items, 1, "All")
+local EventOptions = {"All"}
+for _,item in ipairs(AllEventItems) do
+    table.insert(EventOptions, item)
+end
 
 -- // Config
 getgenv().AutoBuyConfig = getgenv().AutoBuyConfig or {}
 getgenv().AutoBuyConfig.Event = getgenv().AutoBuyConfig.Event or {Selected={}, Enabled=false}
 local EventConfig = getgenv().AutoBuyConfig.Event
 
--- // Dropdown Multi Select
+-- // Menu
+local EventTab = Window:CreateTab("EVENT")
+EventTab:CreateSection("Event Shop")
+
+-- Dropdown Multi-Select
 EventTab:CreateDropdown({
     Name = "Event Shop Items",
-    Options = Items,
+    Options = EventOptions,
     CurrentOption = EventConfig.Selected,
     MultipleOptions = true,
-    Flag = "EventShopItems",
+    Flag = "EventDropdown",
     Callback = function(opts)
         if table.find(opts, "All") then
-            EventConfig.Selected = {}
-            for _,it in ipairs(Items) do
-                if it ~= "All" then
-                    table.insert(EventConfig.Selected, it)
-                end
-            end
+            EventConfig.Selected = AllEventItems
             print("[INFO] All items selected")
         else
             EventConfig.Selected = opts
@@ -363,7 +368,7 @@ EventTab:CreateDropdown({
     end,
 })
 
--- // Toggle Auto Buy
+-- Toggle Auto Buy
 EventTab:CreateToggle({
     Name = "Auto Buy Event Shop",
     CurrentValue = EventConfig.Enabled,
@@ -377,12 +382,10 @@ EventTab:CreateToggle({
                 while EventConfig.Enabled do
                     for _,item in ipairs(EventConfig.Selected) do
                         pcall(function()
-                            -- beli 1x sesuai restock (stok random)
                             local args = {
                                 [1] = item,
-                                [2] = 1
+                                [2] = 1 -- beli 1x (stock random dari restock)
                             }
-
                             print("[TRY BUY]", item)
                             BuyRemote:FireServer(unpack(args))
                             task.wait(0.1)
