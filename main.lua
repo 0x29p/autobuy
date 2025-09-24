@@ -323,7 +323,7 @@ local Event = ReplicatedStorage.GameEvents
 local UnlockRemote = Event.SaveSlotService.RememberUnlockage
 local BuyRemote = Event.BuyEventShopStock
 
--- // Daftar Item Event Shop (static list lu kemarin)
+-- // Daftar Item Event Shop
 local AllEventItems = {
     "Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon",
     "Space Squirrel","Sugar Glider","Woodpecker","Acorn Bell","Acorn Lollipop",
@@ -382,13 +382,20 @@ EventTab:CreateToggle({
                 while EventConfig.Enabled do
                     for _,item in ipairs(EventConfig.Selected) do
                         pcall(function()
+                            -- Unlock dulu
+                            UnlockRemote:FireServer()
+                            task.wait(0.1)
+
+                            -- Beli item
                             local args = {
                                 [1] = item,
-                                [2] = 1 -- beli 1x (stock random dari restock)
+                                [2] = 1
                             }
                             print("[TRY BUY]", item)
                             BuyRemote:FireServer(unpack(args))
                             task.wait(0.1)
+
+                            -- Unlock lagi biar masuk invent
                             UnlockRemote:FireServer()
                         end)
                         task.wait(0.5)
