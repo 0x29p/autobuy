@@ -317,35 +317,54 @@ AutoTab:CreateToggle({
 
 
 ---- event shop menu
--- // Remote
+--// Remote
 local BuyEventRemote = game:GetService("ReplicatedStorage").GameEvents.BuyEventShopStock
 local UnlockRemote = game:GetService("ReplicatedStorage").GameEvents.SaveSlotService.RememberUnlockage
 
--- // Tab & Section
+--// Semua item event
+local AllEventItems = {
+    "Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon",
+    "Space Squirrel","Sugar Glider","Woodpecker","Acorn Bell","Acorn Lollipop",
+    "Bonfire","Firefly Jar","Golden Acorn","Harvest Basket","Leaf Blower",
+    "Maple Leaf Charm","Maple Leaf Kite","Maple Sprinkler","Maple Syrup","Rake",
+    "Sky Lantern","Super Leaf Blower","Carnival Pumpkin","Fall Seed Pack",
+    "Golden Peach","Kniphofia","Maple Resin","Meyer Lemon","Parsley","Turnip",
+    "Fall Crate","Fall Fountain","Fall Hay Bale","Fall Leaf Chair","Fall Wreath",
+    "Flying Kite","Maple Crate","Maple Flag","Pile Of Leaves"
+}
+
+--// Config
+getgenv().AutoBuyConfig = getgenv().AutoBuyConfig or {}
+getgenv().AutoBuyConfig.Event = getgenv().AutoBuyConfig.Event or {Selected={}, Enabled=false}
+local EventConfig = getgenv().AutoBuyConfig.Event
+
+--// Dropdown options
+local EventOptions = {"All"}
+for _,s in ipairs(AllEventItems) do table.insert(EventOptions, s) end
+
+--// Ambil stok item dari UI
+local function GetEventStock(itemName)
+    local playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    local shopUI = playerGui:FindFirstChild("EventShop_UI")
+    if not shopUI then return 1 end
+
+    local itemFrame = shopUI.Frame.ScrollingFrame:FindFirstChild(itemName)
+    if itemFrame then
+        local label = itemFrame:FindFirstChildWhichIsA("TextLabel", true)
+        if label and label.Text then
+            local qty = tonumber(label.Text:match("x(%d+)"))
+            if qty then
+                return qty
+            end
+        end
+    end
+    return 1 -- default fallback
+end
+
+--// Tab menu
 local EventTab = Window:CreateTab("EVENT")
 EventTab:CreateSection("Event Shop")
 
--- // Semua item event
-local AllEventItems = {
-    "Chipmunk","Fall Egg","Mallard","Marmot","Red Panda","Red Squirrel","Salmon","Space Squirrel","Sugar Glider","Woodpecker",
-    "Acorn Bell","Acorn Lollipop","Bonfire","Firefly Jar","Golden Acorn","Harvest Basket","Leaf Blower","Maple Leaf Charm","Maple Leaf Kite","Maple Sprinkler",
-    "Maple Syrup","Rake","Sky Lantern","Super Leaf Blower","Carnival Pumpkin","Fall Seed Pack","Golden Peach","Kniphofia","Maple Resin","Meyer Lemon",
-    "Parsley","Turnip","Fall Crate","Fall Fountain","Fall Hay Bale","Fall Leaf Chair","Fall Wreath","Flying Kite","Maple Crate","Maple Flag","Pile Of Leaves"
-}
-
--- // Config
-getgenv().AutoBuyConfig.Event = getgenv().AutoBuyConfig.Event or {Selected={}, Enabled=false}
-local EventConfig = getgenv().AutoBuyConfig.Event
-getgenv().AutoBuyConfig.EventFeed = getgenv().AutoBuyConfig.EventFeed or {Enabled=false}
-local EventFeedConfig = getgenv().AutoBuyConfig.EventFeed
-
--- // Dropdown Options
-local EventOptions = {"All"}
-for _,s in ipairs(AllEventItems) do
-    table.insert(EventOptions, s)
-end
-
--- // Dropdown Menu
 EventTab:CreateDropdown({
     Name="Event Shop Items",
     Options=EventOptions,
@@ -353,15 +372,16 @@ EventTab:CreateDropdown({
     MultipleOptions=true,
     Flag="EventDropdown",
     Callback=function(opts)
-        if table.find(opts,"All") then
+        if table.find(opts, "All") then
             EventConfig.Selected = AllEventItems
         else
             EventConfig.Selected = opts
         end
+        print("Selected Event Items:", table.concat(EventConfig.Selected, ", "))
     end,
 })
 
--- // Toggle Auto Buy
+--// Auto Buy toggle
 EventTab:CreateToggle({
     Name="Auto Buy Event Shop",
     CurrentValue=EventConfig.Enabled,
@@ -373,13 +393,15 @@ EventTab:CreateToggle({
                 while EventConfig.Enabled do
                     for _,item in ipairs(EventConfig.Selected) do
                         pcall(function()
-                            -- 1. Beli dulu
-                            BuyEventRemote:FireServer(item, 1)
-                            print("Buying:", item)
+                            local qty = GetEventStock(item)
+                            print("[BUY] Item:", item, "Qty:", qty)
 
-                            -- 2. Baru unlock
+                            -- Step 1: Buy
+                            BuyEventRemote:FireServer(item, qty)
+
+                            -- Step 2: Unlock
                             UnlockRemote:FireServer()
-                            print("Unlock called after", item)
+                            print("[UNLOCK] After buying:", item)
                         end)
                         task.wait(0.15) -- delay antar item
                     end
